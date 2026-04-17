@@ -1,5 +1,5 @@
 import feedparser
-from datetime import datetime
+from datetime import datetime, date
 from pathlib import Path
 import yaml
 
@@ -7,24 +7,32 @@ OUTPUT = Path("daily_rg/output/daily_rg.md")
 RSS_URL = "https://www.resmigazete.gov.tr/rss.xml"
 
 def main():
-    today_dt = datetime.now()
-    today_str = today_dt.strftime("%d.%m.%Y")
+    today = date.today()
+    today_str = today.strftime("%d.%m.%Y")
 
     feed = feedparser.parse(RSS_URL)
 
-    if not feed.entries:
+    if feed.bozo:
         OUTPUT.write_text(
             f"📅 {today_str} RESMİ GAZETE RAPORU\n\n"
-            "Resmi Gazete RSS içeriğine erişilemedi.",
+            "Resmi Gazete RSS kaynağı okunamadı.",
             encoding="utf-8"
         )
         return
 
-    # Bugünün kayıtlarını al
+    # Bugün yayımlanan RSS kayıtlarını al
     today_entries = []
     for entry in feed.entries:
-        published = entry.get("published", "")
-        if today_str in published:
+        if not hasattr(entry, "published_parsed"):
+            continue
+
+        published_date = date(
+            entry.published_parsed.tm_year,
+            entry.published_parsed.tm_mon,
+            entry.published_parsed.tm_mday,
+        )
+
+        if published_date == today:
             today_entries.append(entry)
 
     if not today_entries:
@@ -39,7 +47,7 @@ def main():
     with open("daily_rg/rules/ceei_keywords.yaml", "r", encoding="utf-8") as f:
         keywords = yaml.safe_load(f)["keywords"]
 
-    titles = [e.title for e in today_entries]
+    titles = [entry.title for entry in today_entries]
 
     matches = []
     for title in titles:
