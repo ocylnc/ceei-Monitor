@@ -4,9 +4,13 @@ from datetime import datetime
 from pathlib import Path
 import yaml
 
+# Çıktı dosyası
 OUTPUT = Path("daily_rg/output/daily_rg.md")
+
+# Legalbank Resmi Gazete fihristi
 FIHRIST_URL = "https://legalbank.net/belgebank/resmi-gazete-fihristi"
 
+# Tarayıcı gibi görünmek için header
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -16,31 +20,51 @@ HEADERS = {
 }
 
 def main():
-    today = datetime.now().strftime("%d.%m.%Y")
+    today_dt = datetime.now()
+    today_numeric = today_dt.strftime("%d.%m.%Y")
 
+    aylar = {
+        "01": "Ocak",
+        "02": "Şubat",
+        "03": "Mart",
+        "04": "Nisan",
+        "05": "Mayıs",
+        "06": "Haziran",
+        "07": "Temmuz",
+        "08": "Ağustos",
+        "09": "Eylül",
+        "10": "Ekim",
+        "11": "Kasım",
+        "12": "Aralık",
+    }
+
+    today_tr = f"{today_dt.strftime('%d')} {aylar[today_dt.strftime('%m')]} {today_dt.strftime('%Y')}"
+
+    # Legalbank fihristine eriş
     try:
-        r = requests.get(FIHRIST_URL, headers=HEADERS, timeout=30)
+        response = requests.get(FIHRIST_URL, headers=HEADERS, timeout=30)
     except Exception:
         OUTPUT.write_text(
-            f"📅 {today} RESMİ GAZETE RAPORU\n\n"
+            f"📅 {today_numeric} RESMİ GAZETE RAPORU\n\n"
             "Legalbank fihristine erişilemedi.",
             encoding="utf-8"
         )
         return
 
-    soup = BeautifulSoup(r.text, "html.parser")
+    soup = BeautifulSoup(response.text, "html.parser")
 
-    # Tarihi, sayfanın tamamındaki metin üzerinden kontrol et
+    # Sayfanın tamamında bugünkü tarihi ara
     page_text = soup.get_text(separator=" ", strip=True)
-    if today not in page_text:
+
+    if today_numeric not in page_text and today_tr not in page_text:
         OUTPUT.write_text(
-            f"📅 {today} RESMİ GAZETE RAPORU\n\n"
+            f"📅 {today_numeric} RESMİ GAZETE RAPORU\n\n"
             "Resmi Gazete henüz bugünün fihristini yayımlamadı.",
             encoding="utf-8"
         )
         return
 
-    # Fihrist maddelerini al
+    # Fihrist başlıklarını al
     titles = []
     for li in soup.select("ul li"):
         text = li.get_text(strip=True)
@@ -52,16 +76,17 @@ def main():
         keywords = yaml.safe_load(f)["keywords"]
 
     matches = []
-    for t in titles:
+    for title in titles:
         for kw in keywords:
-            if kw.lower() in t.lower():
-                matches.append(t)
+            if kw.lower() in title.lower():
+                matches.append(title)
                 break
 
+    # Raporu oluştur
     report = [
-        f"📅 {today} RESMİ GAZETE RAPORU",
+        f"📅 {today_numeric} RESMİ GAZETE RAPORU",
         "",
-        "(Durum: Legalbank fihristi üzerinden doğrulanmıştır.)",
+        "(Durum: Legalbank Resmi Gazete fihristi üzerinden doğrulanmıştır.)",
         "",
         "A. GÜNLÜK FİHRİST (TAM LİSTE)",
         ""
@@ -72,15 +97,3 @@ def main():
 
     report.append("")
     report.append("B. ÇEEİ KAPSAMINDA TESPİTLER")
-    report.append("")
-
-    if not matches:
-        report.append("• ÇEEİ kapsamında anahtar kelime eşleşmesi bulunmamıştır.")
-    else:
-        for m in matches:
-            report.append(f"* {m}")
-
-    OUTPUT.write_text("\n".join(report), encoding="utf-8")
-
-if __name__ == "__main__":
-    main()
