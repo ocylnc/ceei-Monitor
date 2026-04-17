@@ -30,15 +30,16 @@ def main():
 
     soup = BeautifulSoup(r.text, "html.parser")
 
-    # Sayfanın üst kısmındaki tarihi al
-    header = soup.find("h3")
-    if not header:
-        OUTPUT.write_text(
-            f"📅 {today} RESMİ GAZETE RAPORU\n\n"
-            "Fihrist tarihi tespit edilemedi.",
-            encoding="utf-8"
-        )
-        return
+   # Sayfanın tamamında bugünkü tarihi ara
+page_text = soup.get_text(separator=" ", strip=True)
+
+if today not in page_text:
+    OUTPUT.write_text(
+        f"📅 {today} RESMİ GAZETE RAPORU\n\n"
+        "Resmi Gazete henüz bugünün fihristini yayımlamadı.",
+        encoding="utf-8"
+    )
+    return
 
     fihrist_date = header.get_text(strip=True)
 
