@@ -5,7 +5,6 @@ from pathlib import Path
 import yaml
 
 OUTPUT = Path("daily_rg/output/daily_rg.md")
-RG_URL = "https://www.resmigazete.gov.tr/eskiler"
 
 HEADERS = {
     "User-Agent": (
@@ -15,11 +14,19 @@ HEADERS = {
     )
 }
 
+def get_rg_url(today):
+    year = today.strftime("%Y")
+    month = today.strftime("%m")
+    day = today.strftime("%Y%m%d")
+    return f"https://www.resmigazete.gov.tr/eskiler/{year}/{month}/{day}.htm"
+    
 def main():
-    today = datetime.now().strftime("%d.%m.%Y")
+    today_dt = datetime.now()
+    today = today_dt.strftime("%d.%m.%Y")
+    rg_url = get_rg_url(today_dt)
 
     try:
-        r = requests.get(RG_URL, headers=HEADERS, timeout=30)
+        r = requests.get(rg_url, headers=HEADERS, timeout=30)
     except Exception:
         OUTPUT.write_text(
             f"📅 {today} RESMİ GAZETE RAPORU\n\n"
@@ -28,13 +35,14 @@ def main():
         )
         return
 
-    if today not in r.text:
+    if r.status_code != 200:
         OUTPUT.write_text(
             f"📅 {today} RESMİ GAZETE RAPORU\n\n"
-            "Resmi Gazete henüz bugünün fihristini yayımlamadı.",
+            "Bugünün Resmi Gazetesi henüz yayımlanmamıştır.",
             encoding="utf-8"
         )
         return
+
 
     soup = BeautifulSoup(r.text, "html.parser")
 
