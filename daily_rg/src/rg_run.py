@@ -1,79 +1,45 @@
-import requests
-from bs4 import BeautifulSoup
+import feedparser
 from datetime import datetime
 from pathlib import Path
 import yaml
 
-# Çıktı dosyası
 OUTPUT = Path("daily_rg/output/daily_rg.md")
-
-# Legalbank Resmi Gazete fihristi
-FIHRIST_URL = "https://legalbank.net/belgebank/resmi-gazete-fihristi"
-
-# Tarayıcı gibi görünmek için header
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/122.0.0.0 Safari/537.36"
-    )
-}
+RSS_URL = "https://www.resmigazete.gov.tr/rss.xml"
 
 def main():
     today_dt = datetime.now()
-    today_numeric = today_dt.strftime("%d.%m.%Y")
+    today_str = today_dt.strftime("%d.%m.%Y")
 
-    aylar = {
-        "01": "Ocak",
-        "02": "Şubat",
-        "03": "Mart",
-        "04": "Nisan",
-        "05": "Mayıs",
-        "06": "Haziran",
-        "07": "Temmuz",
-        "08": "Ağustos",
-        "09": "Eylül",
-        "10": "Ekim",
-        "11": "Kasım",
-        "12": "Aralık",
-    }
+    feed = feedparser.parse(RSS_URL)
 
-    today_tr = f"{today_dt.strftime('%d')} {aylar[today_dt.strftime('%m')]} {today_dt.strftime('%Y')}"
-
-    # Legalbank fihristine eriş
-    try:
-        response = requests.get(FIHRIST_URL, headers=HEADERS, timeout=30)
-    except Exception:
+    if not feed.entries:
         OUTPUT.write_text(
-            f"📅 {today_numeric} RESMİ GAZETE RAPORU\n\n"
-            "Legalbank fihristine erişilemedi.",
+            f"📅 {today_str} RESMİ GAZETE RAPORU\n\n"
+            "Resmi Gazete RSS içeriğine erişilemedi.",
             encoding="utf-8"
         )
         return
 
-    soup = BeautifulSoup(response.text, "html.parser")
+    # Bugünün kayıtlarını al
+    today_entries = []
+    for entry in feed.entries:
+        published = entry.get("published", "")
+        if today_str in published:
+            today_entries.append(entry)
 
-    # Sayfanın tamamında bugünkü tarihi ara
-    page_text = soup.get_text(separator=" ", strip=True)
-
-    if today_numeric not in page_text and today_tr not in page_text:
+    if not today_entries:
         OUTPUT.write_text(
-            f"📅 {today_numeric} RESMİ GAZETE RAPORU\n\n"
-            "Resmi Gazete henüz bugünün fihristini yayımlamadı.",
+            f"📅 {today_str} RESMİ GAZETE RAPORU\n\n"
+            "Resmi Gazete henüz bugünün içeriğini yayımlamadı.",
             encoding="utf-8"
         )
         return
-
-    # Fihrist başlıklarını al
-    titles = []
-    for li in soup.select("ul li"):
-        text = li.get_text(strip=True)
-        if text:
-            titles.append(text)
 
     # Anahtar kelimeleri yükle
     with open("daily_rg/rules/ceei_keywords.yaml", "r", encoding="utf-8") as f:
         keywords = yaml.safe_load(f)["keywords"]
+
+    titles = [e.title for e in today_entries]
 
     matches = []
     for title in titles:
@@ -82,13 +48,12 @@ def main():
                 matches.append(title)
                 break
 
-    # Raporu oluştur
     report = [
-        f"📅 {today_numeric} RESMİ GAZETE RAPORU",
+        f"📅 {today_str} RESMİ GAZETE RAPORU",
         "",
-        "(Durum: Legalbank Resmi Gazete fihristi üzerinden doğrulanmıştır.)",
+        "(Durum: Resmi Gazete RSS kaynağı üzerinden doğrulanmıştır.)",
         "",
-        "A. GÜNLÜK FİHRİST (TAM LİSTE)",
+        "A. GÜNLÜK FİHRİST (RSS)",
         ""
     ]
 
@@ -97,3 +62,15 @@ def main():
 
     report.append("")
     report.append("B. ÇEEİ KAPSAMINDA TESPİTLER")
+    report.append("")
+
+    if not matches:
+        report.append("• ÇEEİ kapsamında anahtar kelime eşleşmesi bulunmamıştır.")
+    else:
+        for m in matches:
+            report.append(f"* {m}")
+
+    OUTPUT.write_text("\n".join(report), encoding="utf-8")
+
+if __name__ == "__main__":
+    main()
