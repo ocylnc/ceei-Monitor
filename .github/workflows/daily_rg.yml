@@ -29,4 +29,3 @@ jobs:
           git add daily_rg/output/daily_rg.md
           git commit -m "Günlük Resmi Gazete raporu" || echo "Değişiklik yok"
           git push
-``
