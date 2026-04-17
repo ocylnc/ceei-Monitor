@@ -12,28 +12,26 @@ def main():
 
     feed = feedparser.parse(RSS_URL)
 
-    if feed.bozo:
+    # GERÇEK KRİTER: entry var mı?
+    if not feed.entries:
         OUTPUT.write_text(
             f"📅 {today_str} RESMİ GAZETE RAPORU\n\n"
-            "Resmi Gazete RSS kaynağı okunamadı.",
+            "Resmi Gazete RSS içeriği alınamadı (boş feed).",
             encoding="utf-8"
         )
         return
 
-    # Bugün yayımlanan RSS kayıtlarını al
     today_entries = []
+
     for entry in feed.entries:
-        if not hasattr(entry, "published_parsed"):
-            continue
-
-        published_date = date(
-            entry.published_parsed.tm_year,
-            entry.published_parsed.tm_mon,
-            entry.published_parsed.tm_mday,
-        )
-
-        if published_date == today:
-            today_entries.append(entry)
+        if hasattr(entry, "published_parsed") and entry.published_parsed:
+            pub_date = date(
+                entry.published_parsed.tm_year,
+                entry.published_parsed.tm_mon,
+                entry.published_parsed.tm_mday,
+            )
+            if pub_date == today:
+                today_entries.append(entry)
 
     if not today_entries:
         OUTPUT.write_text(
@@ -43,11 +41,10 @@ def main():
         )
         return
 
-    # Anahtar kelimeleri yükle
     with open("daily_rg/rules/ceei_keywords.yaml", "r", encoding="utf-8") as f:
         keywords = yaml.safe_load(f)["keywords"]
 
-    titles = [entry.title for entry in today_entries]
+    titles = [e.title for e in today_entries]
 
     matches = []
     for title in titles:
@@ -82,3 +79,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+``
