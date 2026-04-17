@@ -5,7 +5,7 @@ from pathlib import Path
 import yaml
 
 OUTPUT = Path("daily_rg/output/daily_rg.md")
-FİHRİST_URL = "https://legalbank.net/belgebank/resmi-gazete-fihristi"
+FIHRIST_URL = "https://legalbank.net/belgebank/resmi-gazete-fihristi"
 
 HEADERS = {
     "User-Agent": (
@@ -19,7 +19,7 @@ def main():
     today = datetime.now().strftime("%d.%m.%Y")
 
     try:
-        r = requests.get(FİHRİST_URL, headers=HEADERS, timeout=30)
+        r = requests.get(FIHRIST_URL, headers=HEADERS, timeout=30)
     except Exception:
         OUTPUT.write_text(
             f"📅 {today} RESMİ GAZETE RAPORU\n\n"
@@ -30,20 +30,9 @@ def main():
 
     soup = BeautifulSoup(r.text, "html.parser")
 
-   # Sayfanın tamamında bugünkü tarihi ara
-page_text = soup.get_text(separator=" ", strip=True)
-
-if today not in page_text:
-    OUTPUT.write_text(
-        f"📅 {today} RESMİ GAZETE RAPORU\n\n"
-        "Resmi Gazete henüz bugünün fihristini yayımlamadı.",
-        encoding="utf-8"
-    )
-    return
-
-    fihrist_date = header.get_text(strip=True)
-
-    if today not in fihrist_date:
+    # Tarihi, sayfanın tamamındaki metin üzerinden kontrol et
+    page_text = soup.get_text(separator=" ", strip=True)
+    if today not in page_text:
         OUTPUT.write_text(
             f"📅 {today} RESMİ GAZETE RAPORU\n\n"
             "Resmi Gazete henüz bugünün fihristini yayımlamadı.",
