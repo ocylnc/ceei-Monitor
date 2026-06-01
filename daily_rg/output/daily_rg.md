@@ -1,3 +1,3 @@
-📅 31.05.2026 RESMİ GAZETE RAPORU
+📅 01.06.2026 RESMİ GAZETE RAPORU
 
 Resmi Gazete RSS içeriği alınamadı (boş feed).
