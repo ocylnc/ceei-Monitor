@@ -1,3 +1,3 @@
-📅 20.08.2026 RESMİ GAZETE RAPORU
+📅 21.08.2026 RESMİ GAZETE RAPORU
 
 Resmi Gazete RSS içeriği alınamadı (boş feed).
