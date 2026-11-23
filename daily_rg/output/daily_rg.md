@@ -1,3 +1,3 @@
-📅 22.11.2026 RESMİ GAZETE RAPORU
+📅 23.11.2026 RESMİ GAZETE RAPORU
 
 Resmi Gazete RSS içeriği alınamadı (boş feed).
